@@ -1,0 +1,12 @@
+{
+  "name": "decimaly-daily-content",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "generate": "node scripts/daily-content.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
