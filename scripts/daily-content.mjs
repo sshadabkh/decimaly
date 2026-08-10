@@ -48,10 +48,57 @@ async function callClaude(prompt, maxTokens = 4000) {
 
 function extractJson(raw) {
   const cleaned = raw.replace(/```json\s*|```/g, "").trim();
-  const start = cleaned.indexOf("[") !== -1 && cleaned.indexOf("[") < cleaned.indexOf("{")
-    ? cleaned.indexOf("[")
-    : cleaned.indexOf("{");
-  const jsonSlice = cleaned.slice(start);
+  const idxArr = cleaned.indexOf("[");
+  const idxObj = cleaned.indexOf("{");
+  let start;
+  if (idxArr === -1) start = idxObj;
+  else if (idxObj === -1) start = idxArr;
+  else start = Math.min(idxArr, idxObj);
+
+  if (start === -1) {
+    throw new Error(`No JSON found in response: ${cleaned.slice(0, 200)}`);
+  }
+
+  const openChar = cleaned[start];
+  const closeChar = openChar === "[" ? "]" : "}";
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let end = -1;
+
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === "\\") {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+    } else if (ch === openChar) {
+      depth++;
+    } else if (ch === closeChar) {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+
+  if (end === -1) {
+    throw new Error(`Could not find matching close bracket in response: ${cleaned.slice(0, 200)}`);
+  }
+
+  const jsonSlice = cleaned.slice(start, end + 1);
   return JSON.parse(jsonSlice);
 }
 
